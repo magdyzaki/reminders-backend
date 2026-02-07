@@ -6,6 +6,7 @@ const { JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
 
+// تسجيل مستخدم جديد
 router.post('/register', (req, res) => {
   const { email, password, name } = req.body || {};
   if (!email || !password) {
@@ -28,6 +29,7 @@ router.post('/register', (req, res) => {
   });
 });
 
+// تسجيل الدخول
 router.post('/login', (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
