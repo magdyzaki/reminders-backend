@@ -5,11 +5,13 @@ const { auth } = require('../middleware/auth');
 const router = express.Router();
 router.use(auth);
 
+// قائمة التنبيهات للمستخدم (للمزامنة)
 router.get('/', (req, res) => {
   const rows = db.getRemindersByUserId(req.userId);
   res.json({ reminders: rows });
 });
 
+// إضافة تنبيه
 router.post('/', (req, res) => {
   const { title, body, remind_at, repeat } = req.body || {};
   if (!title || !remind_at) {
@@ -25,6 +27,7 @@ router.post('/', (req, res) => {
   res.status(201).json(row);
 });
 
+// تعديل تنبيه
 router.put('/:id', (req, res) => {
   const { id } = req.params;
   const { title, body, remind_at, repeat } = req.body || {};
@@ -43,6 +46,7 @@ router.put('/:id', (req, res) => {
   res.json(row);
 });
 
+// حذف تنبيه
 router.delete('/:id', (req, res) => {
   const { id } = req.params;
   const deleted = db.deleteReminder(id, req.userId);
