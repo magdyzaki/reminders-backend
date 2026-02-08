@@ -33,9 +33,8 @@ app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
 
-// كل دقيقة: التحقق من التنبيهات المستحقة وإرسال Push (يعمل حتى مع الشاشة مطفية)
-const CHECK_PUSH_MS = 60 * 1000;
-setInterval(() => {
+// التحقق من التنبيهات المستحقة وإرسال Push
+function runPushCheck() {
   if (!vapidKeys.publicKey || !vapidKeys.privateKey) return;
   const due = db.getDueRemindersNotNotified();
   due.forEach((r) => {
@@ -51,7 +50,11 @@ setInterval(() => {
     });
     db.markReminderNotified(r.id);
   });
-}, CHECK_PUSH_MS);
+}
+
+runPushCheck(); // فور بدء السيرفر
+const CHECK_PUSH_MS = 60 * 1000;
+setInterval(runPushCheck, CHECK_PUSH_MS); // ثم كل دقيقة
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log('سيرفر التنبيهات يعمل على المنفذ', PORT);
