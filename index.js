@@ -43,7 +43,15 @@ function runPushCheck() {
     const payload = { title: r.title, body: r.body || '' };
     webpush.setVapidDetails('mailto:reminders@local', vapidKeys.publicKey, vapidKeys.privateKey);
     subs.forEach((sub) => {
-      const pushSub = { endpoint: sub.endpoint, keys: sub.keys };
+      const keys = sub.keys || {};
+      const pushSub = {
+        endpoint: sub.endpoint,
+        keys: {
+          p256dh: keys.p256dh || keys.P256dh || '',
+          auth: keys.auth || keys.Auth || ''
+        }
+      };
+      if (!pushSub.keys.p256dh || !pushSub.keys.auth) return;
       webpush.sendNotification(pushSub, JSON.stringify(payload)).catch((err) => {
         console.error('Push failed:', err.message);
       });
@@ -54,7 +62,16 @@ function runPushCheck() {
 
 runPushCheck(); // فور بدء السيرفر
 const CHECK_PUSH_MS = 60 * 1000;
-setInterval(runPushCheck, CHECK_PUSH_MS); // ثم كل دقيقة
+setInterval(runPushCheck, CHECK_PUSH_MS); // ثم كل دقيقة (يتوقف عند نوم السيرفر على Koyeb)
+
+// مسار لتفعيل الفحص من كرون خارجي (حتى يعمل التنبيه عندما السيرفر نائم - Scale to Zero)
+app.get('/api/push/check', (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return res.status(503).json({ error: 'CRON_SECRET غير مضبوط في Koyeb' });
+  if (req.query.secret !== secret) return res.status(401).json({ error: 'غير مصرح' });
+  runPushCheck();
+  res.json({ ok: true, message: 'تم فحص التنبيهات' });
+});
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log('سيرفر التنبيهات يعمل على المنفذ', PORT);
