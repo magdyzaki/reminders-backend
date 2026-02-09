@@ -13,7 +13,7 @@ router.get('/', (req, res) => {
 
 // إضافة تنبيه
 router.post('/', (req, res) => {
-  const { title, body, remind_at, repeat } = req.body || {};
+  const { title, body, remind_at, repeat, notes } = req.body || {};
   if (!title || !remind_at) {
     return res.status(400).json({ error: 'العنوان ووقت التذكير مطلوبان' });
   }
@@ -22,7 +22,8 @@ router.post('/', (req, res) => {
     title: (title || '').trim(),
     body: (body || '').trim(),
     remind_at,
-    repeat: (repeat || '') || null
+    repeat: (repeat || '') || null,
+    notes: (notes || '').trim()
   });
   res.status(201).json(row);
 });
@@ -30,18 +31,20 @@ router.post('/', (req, res) => {
 // تعديل تنبيه
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { title, body, remind_at, repeat } = req.body || {};
+  const { title, body, remind_at, repeat, notes } = req.body || {};
   const existing = db.getReminderByIdAndUser(id, req.userId);
   if (!existing) return res.status(404).json({ error: 'التنبيه غير موجود' });
   const newTitle = title !== undefined ? String(title).trim() : existing.title;
   const newBody = body !== undefined ? String(body || '').trim() : existing.body;
   const newRemindAt = remind_at !== undefined ? remind_at : existing.remind_at;
   const newRepeat = repeat !== undefined ? (repeat || null) : existing.repeat;
+  const newNotes = notes !== undefined ? String(notes || '').trim() : (existing.notes !== undefined ? existing.notes : '');
   const row = db.updateReminder(id, req.userId, {
     title: newTitle,
     body: newBody,
     remind_at: newRemindAt,
-    repeat: newRepeat
+    repeat: newRepeat,
+    notes: newNotes
   });
   res.json(row);
 });

@@ -5,9 +5,9 @@ const { auth } = require('../middleware/auth');
 
 const router = express.Router();
 
-// مفتاح VAPID العام (يُعرَض للواجهة للاشتراك)
+// مفتاح VAPID العام (يُعرَض للواجهة للاشتراك) — إزالة أي مسافات أو أسطر جديدة
 router.get('/vapid-public', (req, res) => {
-  const pub = process.env.VAPID_PUBLIC_KEY;
+  const pub = (process.env.VAPID_PUBLIC_KEY || '').trim().replace(/\s/g, '');
   if (!pub) return res.status(503).json({ error: 'VAPID غير مضبوط' });
   res.json({ publicKey: pub });
 });
