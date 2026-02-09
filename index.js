@@ -40,7 +40,7 @@ function runPushCheck() {
   due.forEach((r) => {
     const subs = db.getPushSubscriptionsByUserId(r.user_id);
     if (subs.length === 0) return;
-    const payload = { title: r.title, body: r.body || '' };
+    const payload = { id: r.id, title: r.title, body: r.body || '' };
     webpush.setVapidDetails('mailto:reminders@local', vapidKeys.publicKey, vapidKeys.privateKey);
     subs.forEach((sub) => {
       const keys = sub.keys || {};
@@ -71,6 +71,20 @@ app.get('/api/push/check', (req, res) => {
   if (req.query.secret !== secret) return res.status(401).json({ error: 'غير مصرح' });
   runPushCheck();
   res.json({ ok: true, message: 'تم فحص التنبيهات' });
+});
+
+// تشخيص: عدد الاشتراكات والتنبيهات (للتأكد من أن البيانات موجودة على السيرفر)
+app.get('/api/push/status', (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  if (!secret || req.query.secret !== secret) return res.status(401).json({ error: 'غير مصرح' });
+  const stats = db.getStats();
+  res.json({
+    ok: true,
+    push_subscriptions_count: stats.push_subscriptions_count,
+    reminders_count: stats.reminders_count,
+    due_not_notified_count: stats.due_not_notified_count,
+    vapid_set: !!(vapidKeys.publicKey && vapidKeys.privateKey)
+  });
 });
 
 app.listen(PORT, '0.0.0.0', () => {

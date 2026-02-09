@@ -55,16 +55,17 @@ const db = {
     return low.data.reminders
       .filter((r) => r.user_id === Number(userId))
       .sort((a, b) => new Date(a.remind_at) - new Date(b.remind_at))
-      .map(({ id, title, body, remind_at, repeat, created_at }) => ({
+      .map(({ id, title, body, remind_at, repeat, created_at, notes }) => ({
         id,
         title,
         body,
         remind_at,
         repeat,
-        created_at
+        created_at,
+        notes: notes || ''
       }));
   },
-  addReminder({ user_id, title, body, remind_at, repeat }) {
+  addReminder({ user_id, title, body, remind_at, repeat, notes }) {
     low.read();
     const id = nextId('reminders');
     const row = {
@@ -75,7 +76,8 @@ const db = {
       remind_at,
       repeat: repeat || null,
       created_at: now(),
-      notified_at: null
+      notified_at: null,
+      notes: String((notes !== undefined && notes !== null ? notes : '') || '').trim()
     };
     low.data.reminders.push(row);
     low.write();
@@ -87,7 +89,7 @@ const db = {
       (r) => r.id === Number(id) && r.user_id === Number(userId)
     );
   },
-  updateReminder(id, userId, { title, body, remind_at, repeat }) {
+  updateReminder(id, userId, { title, body, remind_at, repeat, notes }) {
     low.read();
     const r = low.data.reminders.find(
       (x) => x.id === Number(id) && x.user_id === Number(userId)
@@ -97,6 +99,7 @@ const db = {
     if (body !== undefined) r.body = String(body || '').trim();
     if (remind_at !== undefined) r.remind_at = remind_at;
     if (repeat !== undefined) r.repeat = repeat || null;
+    if (notes !== undefined) r.notes = String(notes || '').trim();
     low.write();
     return r;
   },
@@ -145,6 +148,15 @@ const db = {
     if (!r) return;
     r.notified_at = now();
     low.write();
+  },
+  getStats() {
+    low.read();
+    const due = this.getDueRemindersNotNotified();
+    return {
+      push_subscriptions_count: (low.data.push_subscriptions || []).length,
+      reminders_count: (low.data.reminders || []).length,
+      due_not_notified_count: due.length
+    };
   }
 };
 
