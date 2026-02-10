@@ -16,7 +16,12 @@ async function getDb() {
   if (db) return db;
   const uri = (process.env.MONGODB_URI || '').trim();
   if (!uri) throw new Error('MONGODB_URI مطلوب لاستخدام MongoDB');
-  const options = { serverSelectionTimeoutMS: 15000 };
+  // خيارات لتجنب خطأ SSL (tlsv1 alert internal error) على بعض السيرفرات مثل Koyeb
+  const options = {
+    serverSelectionTimeoutMS: 20000,
+    autoSelectFamily: false,
+    family: 4
+  };
   client = new MongoClient(uri, options);
   await client.connect();
   db = client.db(DB_NAME);

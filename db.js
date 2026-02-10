@@ -1,13 +1,13 @@
 /**
- * واجهة التخزين: إذا وُجد MONGODB_URI و USE_MONGODB=1 نستخدم MongoDB.
- * وإلا نستخدم الملف (lowdb). مؤقتاً نستخدم الملف لتجنب خطأ SSL على Koyeb.
+ * واجهة التخزين: إذا وُجد MONGODB_URI نستخدم MongoDB (تخزين دائم).
+ * وإلا نستخدم الملف (lowdb).
  */
 const dbLowdb = require('./db-lowdb');
 const path = require('path');
 const os = require('os');
 
-if (process.env.MONGODB_URI && process.env.USE_MONGODB === '1') {
-  console.log('استخدام MongoDB للتخزين الدائم (MONGODB_URI + USE_MONGODB=1).');
+if (process.env.MONGODB_URI) {
+  console.log('استخدام MongoDB للتخزين الدائم (MONGODB_URI مضبوط).');
   module.exports = require('./db-mongo');
   return;
 }
