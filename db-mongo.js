@@ -14,9 +14,10 @@ let db = null;
 
 async function getDb() {
   if (db) return db;
-  const uri = process.env.MONGODB_URI;
+  const uri = (process.env.MONGODB_URI || '').trim();
   if (!uri) throw new Error('MONGODB_URI مطلوب لاستخدام MongoDB');
-  client = new MongoClient(uri);
+  const options = { serverSelectionTimeoutMS: 15000 };
+  client = new MongoClient(uri, options);
   await client.connect();
   db = client.db(DB_NAME);
   return db;
