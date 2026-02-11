@@ -47,6 +47,9 @@ router.post('/login', async (req, res) => {
     if (!row || !bcrypt.compareSync(password.trim(), row.password_hash)) {
       return res.status(401).json({ error: 'البريد أو كلمة المرور غير صحيحة' });
     }
+    if (await db.isUserBlocked(row.id)) {
+      return res.status(403).json({ error: 'تم إيقاف وصولك من قبل المسؤول' });
+    }
     const token = jwt.sign({ userId: row.id }, JWT_SECRET, { expiresIn: '30d' });
     res.json({ user: { id: row.id, email: row.email, name: row.name }, token });
   } catch (e) {
