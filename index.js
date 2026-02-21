@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const webpush = require('web-push');
@@ -31,6 +32,10 @@ app.use('/api/reminders', reminderRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api', inviteRoutes);
 app.use('/api/admin', adminRoutes);
+
+app.get('/', (req, res) => {
+  res.json({ ok: true, service: 'reminders-api' });
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
