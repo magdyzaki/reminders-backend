@@ -1,4 +1,8 @@
 require('dotenv').config();
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException:', err?.stack || err);
+  process.exit(1);
+});
 const express = require('express');
 const cors = require('cors');
 const webpush = require('web-push');

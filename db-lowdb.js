@@ -6,6 +6,7 @@ const { JSONFileSync } = require('lowdb/node');
 
 function getDbPath() {
   if (process.env.DB_PATH) return process.env.DB_PATH;
+  // على Render وغيره: /tmp قابل للكتابة (ephemeral)
   if (process.env.PORT) return path.join(os.tmpdir(), 'reminders-db.json');
   return path.join(__dirname, 'db.json');
 }
@@ -18,20 +19,28 @@ try {
 
 const adapter = new JSONFileSync(dbPath);
 const low = new LowSync(adapter, { users: [], reminders: [], push_subscriptions: [], invite_links: [], blocked_user_ids: [] });
-low.read();
+try {
+  low.read();
+} catch (e) {
+  console.warn('lowdb read:', e.message, '- استخدام البيانات الافتراضية');
+}
+const defaults = { users: [], reminders: [], push_subscriptions: [], invite_links: [], blocked_user_ids: [] };
+if (!low.data || typeof low.data !== 'object') low.data = { ...defaults };
+for (const k of Object.keys(defaults)) {
+  if (!Array.isArray(low.data[k])) low.data[k] = [];
+}
 if (!Array.isArray(low.data.push_subscriptions)) {
   low.data.push_subscriptions = [];
-  low.write();
+  try { low.write(); } catch (_) {}
 }
 if (!Array.isArray(low.data.invite_links)) {
   low.data.invite_links = [];
-  low.write();
+  try { low.write(); } catch (_) {}
 }
 if (!Array.isArray(low.data.blocked_user_ids)) {
   low.data.blocked_user_ids = [];
-  low.write();
+  try { low.write(); } catch (_) {}
 }
-low.read();
 
 function nextId(collection) {
   const arr = low.data[collection];
