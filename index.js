@@ -21,12 +21,17 @@ if (!vapidKeys.publicKey || !vapidKeys.privateKey) {
   vapidKeys = webpush.generateVAPIDKeys();
   process.env.VAPID_PUBLIC_KEY = vapidKeys.publicKey;
   process.env.VAPID_PRIVATE_KEY = vapidKeys.privateKey;
-  console.log('لتفعيل التنبيه مع الشاشة مطفية، ضع في Environment Variables:');
+  console.log('');
+  console.log('*** التنبيه مع الشاشة مطفية غير مفعّل ***');
+  console.log('المفتاح العام يتغيّر عند كل إعادة تشغيل — يجب ضبط VAPID في Environment Variables');
+  console.log('اقرأ ملف: خطوات-VAPID-للتشغيل.md');
   console.log('VAPID_PUBLIC_KEY=', vapidKeys.publicKey);
   console.log('VAPID_PRIVATE_KEY=', vapidKeys.privateKey);
+  console.log('');
 } else {
-  webpush.setVapidDetails('mailto:reminders@local', vapidKeys.publicKey, vapidKeys.privateKey);
+  process.env.VAPID_FROM_ENV = '1';
 }
+webpush.setVapidDetails('mailto:reminders@local', vapidKeys.publicKey, vapidKeys.privateKey);
 
 app.use(cors({
   origin: true,
@@ -68,6 +73,12 @@ async function runPushCheck() {
         await webpush.sendNotification(pushSub, JSON.stringify(payload));
       } catch (err) {
         console.error('Push failed:', err.message);
+        // إزالة الاشتراك إذا انتهى أو لم يعد صالحاً (410 أو 404)
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          try {
+            await db.removePushSubscriptionByEndpoint(sub.endpoint);
+          } catch (_) {}
+        }
       }
     }
     await db.markReminderNotified(r.id);
@@ -80,7 +91,7 @@ setInterval(() => runPushCheck().catch((e) => console.error(e.message)), CHECK_P
 
 app.get('/api/push/check', (req, res) => {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return res.status(503).json({ error: 'CRON_SECRET غير مضبوط في Koyeb' });
+  if (!secret) return res.status(503).json({ error: 'CRON_SECRET غير مضبوط في Render' });
   if (req.query.secret !== secret) return res.status(401).json({ error: 'غير مصرح' });
   runPushCheck().then(() => res.json({ ok: true, message: 'تم فحص التنبيهات' })).catch((e) => res.status(500).json({ error: e.message }));
 });
@@ -103,5 +114,9 @@ app.get('/api/push/status', async (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
+  const vapidOk = process.env.VAPID_FROM_ENV === '1';
   console.log('سيرفر التنبيهات يعمل على المنفذ', PORT);
+  if (vapidOk) {
+    console.log('✓ التنبيه مع الشاشة مطفية مفعّل');
+  }
 });
