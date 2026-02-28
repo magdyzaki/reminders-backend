@@ -8,10 +8,28 @@ const router = express.Router();
 
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body || {};
+    const { email, password, name, inviteToken } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ error: 'البريد الإلكتروني وكلمة المرور مطلوبان' });
     }
+
+    // التحقق من رابط الدعوة (مطلوب ما عدا أول مستخدم في النظام)
+    const allUsers = await db.getAllUsers();
+    const isFirstUser = !allUsers || allUsers.length === 0;
+
+    if (!isFirstUser) {
+      if (!inviteToken || typeof inviteToken !== 'string' || !inviteToken.trim()) {
+        return res.status(400).json({ error: 'رابط الدعوة مطلوب للتسجيل. اطلب من المسؤول رابط دعوة.' });
+      }
+      const link = await db.getInviteLink(inviteToken.trim());
+      if (!link) {
+        return res.status(400).json({ error: 'رابط الدعوة غير صالح' });
+      }
+      if (link.used_at) {
+        return res.status(400).json({ error: 'رابط الدعوة مُستهلَك مسبقاً. اطلب رابطاً جديداً.' });
+      }
+    }
+
     const emailNorm = email.trim().toLowerCase();
     const existing = await db.findUserByEmail(emailNorm);
     if (existing) {
@@ -23,6 +41,12 @@ router.post('/register', async (req, res) => {
       password_hash: hash,
       name: (name || '').trim()
     });
+
+    // استهلاك رابط الدعوة بعد التسجيل الناجح (إن وُجد)
+    if (!isFirstUser && inviteToken) {
+      await db.consumeInviteLink(inviteToken.trim());
+    }
+
     const token = jwt.sign({ userId: row.id }, JWT_SECRET, { expiresIn: '30d' });
     return res.json({
       user: { id: row.id, email: row.email, name: row.name },
