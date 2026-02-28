@@ -18,11 +18,12 @@ async function getDb() {
   if (db) return db;
   const uri = (process.env.MONGODB_URI || '').trim();
   if (!uri) throw new Error('MONGODB_URI مطلوب لاستخدام MongoDB');
-  // خيارات لتجنب خطأ SSL (tlsv1 alert internal error) على بعض السيرفرات مثل Koyeb
+  // خيارات لتجنب خطأ SSL (tlsv1 alert internal error) على Render و Koyeb
   const options = {
     serverSelectionTimeoutMS: 20000,
     autoSelectFamily: false,
-    family: 4
+    family: 4,
+    tlsAllowInvalidCertificates: true  // حل لخطأ TLS مع Atlas على Render
   };
   client = new MongoClient(uri, options);
   await client.connect();
@@ -164,6 +165,10 @@ remind_at: new Date(remind_at),
   async getPushSubscriptionsByUserId(userId) {
     const d = await getDb();
     return d.collection(COL_PUSH).find({ user_id: Number(userId) }).toArray();
+  },
+  async removePushSubscriptionByEndpoint(endpoint) {
+    const d = await getDb();
+    await d.collection(COL_PUSH).deleteOne({ endpoint });
   },
 
   async getDueRemindersNotNotified() {
